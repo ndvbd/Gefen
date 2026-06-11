@@ -1,0 +1,4 @@
+# Local Python packaging artifacts
+__pycache__/
+kernels/__pycache__/
+gefen.egg-info/
