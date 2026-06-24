@@ -1,0 +1,3 @@
+# Include CUDA/C++ sources in source distributions so PyTorch JIT can build kernels after install.
+recursive-include kernels *.py *.cu *.cpp *.md
+prune kernels/.build

@@ -1,0 +1,43 @@
+# Python packaging metadata used by pip/build to install Gefen as an importable package.
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "gefen"
+version = "1.1.1"
+description = "Gefen optimizer for memory-efficient PyTorch training"
+readme = "README.md"
+requires-python = ">=3.9"
+license = { file = "LICENSE" }
+authors = [
+  { name = "Nadav Benedek" }
+]
+classifiers = [
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3 :: Only",
+  "Programming Language :: Python :: 3.9",
+  "Programming Language :: Python :: 3.10",
+  "Programming Language :: Python :: 3.11",
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: POSIX :: Linux",
+  "Topic :: Scientific/Engineering :: Artificial Intelligence"
+]
+dependencies = [
+  "ninja",
+  "numpy",
+  "numba",
+  "torch"
+]
+
+[project.urls]
+Repository = "https://github.com/ndvbd/Gefen"
+Issues = "https://github.com/ndvbd/Gefen/issues"
+
+[tool.setuptools]
+include-package-data = true
+packages = ["gefen", "gefen.kernels"]
+
+[tool.setuptools.package-dir]
+gefen = "."
+"gefen.kernels" = "kernels"
