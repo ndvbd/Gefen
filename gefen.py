@@ -1,4 +1,5 @@
 import math
+from itertools import chain
 from typing import Iterable, Optional, Tuple, Union
 
 import torch
@@ -894,8 +895,49 @@ class Gefen(torch.optim.Optimizer):
 
     def load_state_dict(self, state_dict):
         gefen_global_step = state_dict.pop("gefen_global_step", 0)
+
+        # torch.optim.Optimizer.load_state_dict casts *every* per-param state
+        # tensor to the owning parameter's dtype whenever that parameter is
+        # floating point. For a bf16 model that silently downcasts Gefen's
+        # float32 aux moments (vmean, m_magnitude) and its uint8 quantized
+        # momentum codebook (m_codebook) to bf16, after which the CUDA kernels
+        # reject the wrong dtypes and the first post-resume step crashes. Stash
+        # the pristine saved tensors and write them back after the base load so
+        # every aux tensor round-trips losslessly (a bf16 round-trip would also
+        # corrupt the float32 moments). Keyed off the saved state, not hard-coded
+        # names, so any future aux tensor is preserved too.
+        saved_state = state_dict.get("state", {}) or {}
+
         super().load_state_dict(state_dict)
         self._gefen_global_step = gefen_global_step
+
+        # Map saved param ids -> live param objects exactly as the base class
+        # does, then restore each aux tensor from its pristine saved copy.
+        id_map = dict(
+            zip(
+                chain.from_iterable(
+                    group["params"] for group in state_dict["param_groups"]
+                ),
+                chain.from_iterable(group["params"] for group in self.param_groups),
+            )
+        )
+        for param_id, saved_param_state in saved_state.items():
+            param = id_map.get(param_id)
+            if param is None:
+                continue
+            live_state = self.state.get(param)
+            if live_state is None:
+                continue
+            for key, saved_value in saved_param_state.items():
+                if not torch.is_tensor(saved_value):
+                    continue
+                live_value = live_state.get(key)
+                if torch.is_tensor(live_value) and live_value.dtype == saved_value.dtype:
+                    continue
+                device = (
+                    live_value.device if torch.is_tensor(live_value) else param.device
+                )
+                live_state[key] = saved_value.to(device=device, dtype=saved_value.dtype)
 
     @torch.no_grad()
     def step(self, closure=None):
