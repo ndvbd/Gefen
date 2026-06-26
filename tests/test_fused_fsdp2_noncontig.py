@@ -100,6 +100,10 @@ def case_B():
         p = torch.nn.Parameter(
             DTensor.from_local(local_nc, mesh, [Shard(0)], run_check=False)
         )
+        # Guard the premise: if DTensor.from_local ever normalized the local
+        # storage to contiguous, the step below would skip the copy-back branch
+        # this test exists to cover and still "pass". Fail loudly instead.
+        assert not p.to_local().is_contiguous()
         grad_dt = DTensor.from_local(grad.clone(), mesh, [Shard(0)], run_check=False)
         p.grad = grad_dt
 
